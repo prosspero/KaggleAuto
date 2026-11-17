@@ -1,9 +1,9 @@
 {
-  "current_account_index": 0,
-  "current_session_start": "2026-11-17T05:01:16.331263+00:00",
+  "current_account_index": 1,
+  "current_session_start": "2026-11-17T18:07:15.263836+00:00",
   "quota": {
     "mangeshwagh91": {
-      "used_hours": 42.6772,
+      "used_hours": 14.26,
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangeshhwagh": {
@@ -19,7 +19,7 @@
       "week_start": "2026-11-15T00:00:00"
     }
   },
-  "last_health_check": "2026-11-17T15:50:08.878987+00:00",
+  "last_health_check": "2026-11-17T18:07:15.263836+00:00",
   "last_health_ok": true,
   "consecutive_failures": 0,
   "history": [
@@ -33,24 +33,12 @@
       "account": "mangeshwagh91"
     },
     {
-      "time": "2026-11-17T12:37:39.499635+00:00",
-      "event": "rotate_failed",
-      "reason": "health_failure"
-    },
-    {
-      "time": "2026-11-17T13:57:01.000703+00:00",
-      "event": "rotate_failed",
-      "reason": "health_failure"
-    },
-    {
-      "time": "2026-11-17T16:55:29.664670+00:00",
-      "event": "rotate_failed",
-      "reason": "health_failure"
-    },
-    {
-      "time": "2026-11-17T17:55:22.733124+00:00",
-      "event": "rotate_failed",
-      "reason": "health_failure"
+      "time": "2026-11-17T18:07:15.263836+00:00",
+      "event": "rotated",
+      "old": "mangeshwagh91",
+      "new": "mangeshhwagh",
+      "reason": "session_completed"
     }
-  ]
+  ],
+  "last_rotation": "2026-11-17T18:07:15.263836+00:00"
 }
