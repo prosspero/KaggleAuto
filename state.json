@@ -3,7 +3,7 @@
   "current_session_start": "2026-11-17T05:01:16.331263+00:00",
   "quota": {
     "mangeshwagh91": {
-      "used_hours": 29.7755,
+      "used_hours": 42.6772,
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangeshhwagh": {
@@ -44,6 +44,11 @@
     },
     {
       "time": "2026-11-17T16:55:29.664670+00:00",
+      "event": "rotate_failed",
+      "reason": "health_failure"
+    },
+    {
+      "time": "2026-11-17T17:55:22.733124+00:00",
       "event": "rotate_failed",
       "reason": "health_failure"
     }
