@@ -1,0 +1,18 @@
+{
+  "id": "__KERNEL_SLUG__",
+  "title": "__KERNEL_TITLE__",
+  "code_file": "kaggle_notebook.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": [],
+  "keywords": [],
+  "docker_image_pinning_type": "latest",
+  "accelerator": "nvidiaTeslaT4x2"
+}

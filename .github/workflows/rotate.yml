@@ -1,0 +1,63 @@
+name: Kaggle GPU Rotation
+
+on:
+  # Runs every 15 minutes
+  schedule:
+    - cron: '*/15 * * * *'
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      force_rotate:
+        description: 'Force rotation to next account'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write  # needed to commit state.json back
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Run rotation check
+        env:
+          # All 6 Kaggle account credentials (stored as GitHub Secrets)
+          KAGGLE_USER_1: ${{ secrets.KAGGLE_USER_1 }}
+          KAGGLE_KEY_1: ${{ secrets.KAGGLE_KEY_1 }}
+          KAGGLE_USER_2: ${{ secrets.KAGGLE_USER_2 }}
+          KAGGLE_KEY_2: ${{ secrets.KAGGLE_KEY_2 }}
+          KAGGLE_USER_3: ${{ secrets.KAGGLE_USER_3 }}
+          KAGGLE_KEY_3: ${{ secrets.KAGGLE_KEY_3 }}
+          KAGGLE_USER_4: ${{ secrets.KAGGLE_USER_4 }}
+          KAGGLE_KEY_4: ${{ secrets.KAGGLE_KEY_4 }}
+          KAGGLE_USER_5: ${{ secrets.KAGGLE_USER_5 }}
+          KAGGLE_KEY_5: ${{ secrets.KAGGLE_KEY_5 }}
+          KAGGLE_USER_6: ${{ secrets.KAGGLE_USER_6 }}
+          KAGGLE_KEY_6: ${{ secrets.KAGGLE_KEY_6 }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          HEALTH_CHECK_URL: ${{ secrets.HEALTH_CHECK_URL }}
+          FORCE_ROTATE: ${{ github.event.inputs.force_rotate || 'false' }}
+        run: python ghactions_orchestrator.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "KaggleAuto Bot"
+          git config user.email "bot@kaggleauto.local"
+          git add state.json
+          git diff --cached --quiet || git commit -m "chore: update rotation state [skip ci]"
+          git push

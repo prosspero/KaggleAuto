@@ -1,0 +1,13 @@
+# Private config containing Kaggle API keys and tokens
+config.json
+kaggle.json
+
+# Staging and cache folders
+logs/
+.push_staging/
+.stop_staging/
+.kaggle_logs/
+__pycache__/
+*.pyc
+*.tmp
+.vercel/
