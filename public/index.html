@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaggleAuto — 24/7 Qwen3.6-35B Fleet Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            },
+            dark: {
+              900: '#0b0f19',
+              800: '#111827',
+              700: '#1f2937',
+              600: '#374151'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .live-pulse { animation: pulse-subtle 2s infinite ease-in-out; }
+    .glass { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card { background: rgba(31, 41, 55, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+  </style>
+</head>
+<body class="bg-[#080c14] text-gray-100 min-h-screen font-sans selection:bg-brand-500 selection:text-white">
+
+  <!-- Navigation Bar -->
+  <header class="border-b border-gray-800 bg-[#0d131f]/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fa-solid fa-server text-white text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-lg text-white tracking-tight">KaggleAuto</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Fleet v2.1</span>
+          </div>
+          <p class="text-xs text-gray-400">24/7 Autonomous GPU Cluster • Qwen 3.6 35B</p>
+        </div>
+      </div>
+
+      <!-- Quick Status Badges -->
+      <div class="flex items-center space-x-3">
+        <div id="endpointBadge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700/60 text-xs text-gray-300">
+          <span class="w-2 h-2 rounded-full bg-yellow-400 live-pulse" id="pingDot"></span>
+          <span id="endpointText">Pinging model...</span>
+        </div>
+
+        <button onclick="fetchState(true)" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 transition border border-gray-700">
+          <i class="fa-solid fa-rotate text-gray-400" id="refreshIcon"></i>
+          <span>Refresh</span>
+        </button>
+
+        <button onclick="toggleSettingsModal()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition border border-gray-700" title="Settings">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Active Session Hero Card -->
+    <div class="glass rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+      <div class="absolute -right-16 -top-16 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+        <div>
+          <div class="flex items-center space-x-3 mb-2">
+            <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>ACTIVE SESSION</span>
+            </span>
+            <span class="text-xs text-gray-400" id="sessionStartTime">Started: Loading...</span>
+          </div>
+          <h2 class="text-3xl font-extrabold text-white tracking-tight" id="activeAccountName">Connecting to cluster...</h2>
+          <p class="text-sm text-gray-400 mt-1 flex items-center space-x-2">
+            <span id="activeSlugText">Kernel: Loading...</span>
+            <a id="kaggleKernelLink" href="#" target="_blank" class="text-brand-400 hover:text-brand-300 inline-flex items-center space-x-1 text-xs">
+              <span>View on Kaggle</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+          </p>
+        </div>
+
+        <!-- Session Countdown Timer -->
+        <div class="flex items-center space-x-6 bg-gray-900/60 border border-gray-800/80 rounded-xl p-4">
+          <div>
+            <div class="text-xs text-gray-400 font-medium">Session Elapsed</div>
+            <div class="text-2xl font-bold text-white tracking-tight" id="sessionElapsedText">--h --m</div>
+            <div class="text-[11px] text-gray-500">of 11.5h limit</div>
+          </div>
+          <div class="h-10 w-px bg-gray-800"></div>
+          <div>
+            <div class="text-xs text-gray-400 font-medium">Next Rotation In</div>
+            <div class="text-2xl font-bold text-emerald-400 tracking-tight" id="sessionRemainingText">--h --m</div>
+            <div class="text-[11px] text-gray-500">Auto-handover</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Progress Bar -->
+      <div class="mt-6 pt-6 border-t border-gray-800/80">
+        <div class="flex justify-between text-xs text-gray-400 mb-2 font-medium">
+          <span>Session Lifecycle Progress</span>
+          <span id="sessionProgressPct">0%</span>
+        </div>
+        <div class="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+          <div id="sessionProgressBar" class="bg-gradient-to-r from-emerald-500 via-teal-400 to-brand-400 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Key Metrics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="glass-card rounded-xl p-5">
+        <div class="flex items-center justify-between text-gray-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider">Fleet Capacity</span>
+          <i class="fa-solid fa-microchip text-emerald-400"></i>
+        </div>
+        <div class="text-2xl font-bold text-white tracking-tight" id="fleetCapacityText">6 Accounts</div>
+        <div class="text-xs text-gray-400 mt-1">180 hrs / week pooled GPU</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-5">
+        <div class="flex items-center justify-between text-gray-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider">Total GPU Used</span>
+          <i class="fa-solid fa-clock text-blue-400"></i>
+        </div>
+        <div class="text-2xl font-bold text-white tracking-tight" id="totalGpuUsedText">0.0 hrs</div>
+        <div class="text-xs text-gray-400 mt-1" id="totalGpuRemText">180.0 hrs remaining</div>
+      </div>
+
+      <div class="glass-card rounded-xl p-5">
+        <div class="flex items-center justify-between text-gray-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider">Live Model Latency</span>
+          <i class="fa-solid fa-bolt text-amber-400"></i>
+        </div>
+        <div class="text-2xl font-bold text-white tracking-tight" id="latencyText">-- ms</div>
+        <div class="text-xs text-emerald-400 mt-1 flex items-center space-x-1" id="modelHealthText">
+          <i class="fa-solid fa-circle-check text-[10px]"></i>
+          <span>Ready for inference</span>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-xl p-5">
+        <div class="flex items-center justify-between text-gray-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider">Quota Reset In</span>
+          <i class="fa-solid fa-calendar text-purple-400"></i>
+        </div>
+        <div class="text-2xl font-bold text-white tracking-tight" id="quotaResetDaysText">Sunday</div>
+        <div class="text-xs text-gray-400 mt-1">Weekly 30h limit per account</div>
+      </div>
+    </div>
+
+    <!-- Accounts Fleet Matrix -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-bold text-white">Accounts Fleet Matrix</h3>
+          <p class="text-xs text-gray-400">Real-time status, weekly quotas, and GPU utilization for all 6 accounts</p>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700">Strict 1-Account Active Rule</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="accountsGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Event History & Audit Log -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-bold text-white">Cluster Event Timeline</h3>
+          <p class="text-xs text-gray-400">Log of handovers, startup verifications, and failovers</p>
+        </div>
+        <span class="text-xs text-gray-500" id="lastUpdatedText">Updated: just now</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-gray-400">
+          <thead class="text-xs uppercase bg-gray-900/50 text-gray-400 border-b border-gray-800">
+            <tr>
+              <th class="py-3 px-4">Time</th>
+              <th class="py-3 px-4">Event</th>
+              <th class="py-3 px-4">Account</th>
+              <th class="py-3 px-4">Details</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody" class="divide-y divide-gray-800/60 font-mono text-xs">
+            <tr>
+              <td colspan="4" class="py-4 px-4 text-center text-gray-500">Loading events history...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white">Dashboard Settings</h3>
+        <button onclick="toggleSettingsModal()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">State Data Source URL</label>
+          <input type="text" id="settingStateUrl" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500" placeholder="/state.json or https://raw.githubusercontent.com/.../state.json">
+          <p class="text-[11px] text-gray-500 mt-1">Leave as <code>/state.json</code> when deployed together on Vercel, or paste your GitHub raw URL.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Model Health Check Endpoint</label>
+          <input type="text" id="settingHealthUrl" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500" value="https://qwen.prosspero.com/api/tags">
+          <p class="text-[11px] text-gray-500 mt-1">Used to measure real-time browser-to-model latency.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Auto Refresh Interval (Seconds)</label>
+          <select id="settingRefreshSec" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs">
+            <option value="10">10 seconds</option>
+            <option value="15" selected>15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60">60 seconds</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-3">
+        <button onclick="toggleSettingsModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs font-medium hover:bg-gray-700">Cancel</button>
+        <button onclick="saveSettings()" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-medium hover:bg-brand-500">Save & Reload</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Config defaults
+    const ACCOUNTS_METADATA = [
+      { username: "mangeshwagh91", slug: "mangeshwagh91/qwen-35b-serve-1", index: 0 },
+      { username: "mangeshhwagh", slug: "mangeshhwagh/qwen-35b-serve-2", index: 1 },
+      { username: "geca91", slug: "geca91/qwen-35b-serve-3", index: 2 },
+      { username: "myaccount4", slug: "myaccount4/qwen-35b-serve-4", index: 3 },
+      { username: "kaggle_user_5", slug: "kaggle_user_5/qwen-35b-serve-5", index: 4 },
+      { username: "kaggle_user_6", slug: "kaggle_user_6/qwen-35b-serve-6", index: 5 },
+    ];
+
+    let stateUrl = localStorage.getItem("kaggleauto_state_url") || "/api";
+    let healthUrl = localStorage.getItem("kaggleauto_health_url") || "https://qwen.prosspero.com/api/tags";
+    let refreshSec = parseInt(localStorage.getItem("kaggleauto_refresh_sec") || "15", 10);
+    let refreshTimer = null;
+
+    function toggleSettingsModal() {
+      const modal = document.getElementById("settingsModal");
+      modal.classList.toggle("hidden");
+      document.getElementById("settingStateUrl").value = stateUrl;
+      document.getElementById("settingHealthUrl").value = healthUrl;
+      document.getElementById("settingRefreshSec").value = refreshSec.toString();
+    }
+
+    function saveSettings() {
+      stateUrl = document.getElementById("settingStateUrl").value.trim() || "/state.json";
+      healthUrl = document.getElementById("settingHealthUrl").value.trim() || "https://qwen.prosspero.com/api/tags";
+      refreshSec = parseInt(document.getElementById("settingRefreshSec").value, 10);
+      localStorage.setItem("kaggleauto_state_url", stateUrl);
+      localStorage.setItem("kaggleauto_health_url", healthUrl);
+      localStorage.setItem("kaggleauto_refresh_sec", refreshSec);
+      toggleSettingsModal();
+      initPolling();
+      fetchState(true);
+    }
+
+    // Ping model endpoint for real-time latency
+    async function pingModel() {
+      const dot = document.getElementById("pingDot");
+      const text = document.getElementById("endpointText");
+      const latencyEl = document.getElementById("latencyText");
+      const healthEl = document.getElementById("modelHealthText");
+
+      const start = performance.now();
+      try {
+        const resp = await fetch(healthUrl, { method: "GET", mode: "cors" });
+        const latency = Math.round(performance.now() - start);
+
+        if (resp.ok) {
+          dot.className = "w-2 h-2 rounded-full bg-emerald-400 live-pulse";
+          text.innerText = `Tunnel Online (${latency}ms)`;
+          latencyEl.innerText = `${latency} ms`;
+          healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.6 35B</span>`;
+          healthEl.className = "text-xs text-emerald-400 mt-1 flex items-center space-x-1";
+        } else {
+          dot.className = "w-2 h-2 rounded-full bg-amber-400";
+          text.innerText = `Status ${resp.status} (${latency}ms)`;
+          latencyEl.innerText = `${latency} ms`;
+          healthEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[10px]"></i><span>HTTP ${resp.status}</span>`;
+          healthEl.className = "text-xs text-amber-400 mt-1 flex items-center space-x-1";
+        }
+      } catch (err) {
+        dot.className = "w-2 h-2 rounded-full bg-red-500";
+        text.innerText = "Tunnel Offline / Unreachable";
+        latencyEl.innerText = "Timeout";
+        healthEl.innerHTML = `<i class="fa-solid fa-circle-xmark text-[10px]"></i><span>Endpoint unreachable</span>`;
+        healthEl.className = "text-xs text-red-400 mt-1 flex items-center space-x-1";
+      }
+    }
+
+    // Fetch and render state.json
+    async function fetchState(manual = false) {
+      const icon = document.getElementById("refreshIcon");
+      if (manual && icon) icon.classList.add("fa-spin");
+
+      try {
+        const res = await fetch(stateUrl + "?_t=" + Date.now());
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const state = await res.json();
+        renderDashboard(state);
+      } catch (e) {
+        console.warn("Could not load state from " + stateUrl, e);
+        // Fallback demo state if loading locally without webserver
+        renderFallback();
+      } finally {
+        if (manual && icon) setTimeout(() => icon.classList.remove("fa-spin"), 600);
+        pingModel();
+        document.getElementById("lastUpdatedText").innerText = "Updated: " + new Date().toLocaleTimeString();
+      }
+    }
+
+    function renderDashboard(state) {
+      const activeIdx = state.current_account_index || 0;
+      const activeMeta = ACCOUNTS_METADATA[activeIdx] || { username: "Account " + activeIdx, slug: "" };
+      const currentStart = state.current_session_start ? new Date(state.current_session_start) : null;
+
+      // Active hero
+      document.getElementById("activeAccountName").innerText = activeMeta.username;
+      document.getElementById("activeSlugText").innerText = "Kernel: " + activeMeta.slug;
+      document.getElementById("kaggleKernelLink").href = "https://www.kaggle.com/code/" + activeMeta.slug;
+
+      let elapsedHours = 0;
+      if (currentStart) {
+        document.getElementById("sessionStartTime").innerText = "Started: " + currentStart.toLocaleTimeString();
+        elapsedHours = Math.max(0, (Date.now() - currentStart.getTime()) / (1000 * 3600));
+      } else {
+        document.getElementById("sessionStartTime").innerText = "Idle / Waiting";
+      }
+
+      const totalSession = 11.5;
+      const remainingHours = Math.max(0, totalSession - elapsedHours);
+      const pct = Math.min(100, Math.round((elapsedHours / totalSession) * 100));
+
+      const elH = Math.floor(elapsedHours);
+      const elM = Math.round((elapsedHours - elH) * 60);
+      const remH = Math.floor(remainingHours);
+      const remM = Math.round((remainingHours - remH) * 60);
+
+      document.getElementById("sessionElapsedText").innerText = `${elH}h ${elM}m`;
+      document.getElementById("sessionRemainingText").innerText = `${remH}h ${remM}m`;
+      document.getElementById("sessionProgressPct").innerText = `${pct}%`;
+      document.getElementById("sessionProgressBar").style.width = `${pct}%`;
+
+      // Quotas
+      const quotaMap = state.quota || {};
+      let totalUsedHours = 0;
+
+      // Render accounts matrix
+      const grid = document.getElementById("accountsGrid");
+      grid.innerHTML = "";
+
+      ACCOUNTS_METADATA.forEach((acc, i) => {
+        const isActive = (i === activeIdx);
+        const q = quotaMap[acc.username] || { used_hours: 0 };
+        const used = parseFloat(q.used_hours || 0);
+        totalUsedHours += used;
+        const remaining = Math.max(0, 30.0 - used);
+        const qPct = Math.min(100, Math.round((used / 30.0) * 100));
+
+        const card = document.createElement("div");
+        card.className = `rounded-xl p-5 border transition-all ${
+          isActive 
+            ? "bg-gradient-to-b from-gray-900 to-gray-800/90 border-emerald-500/50 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
+            : "glass-card border-gray-800/80 hover:border-gray-700"
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded ${isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-gray-800 text-gray-400'}">
+              Account #${i + 1}
+            </span>
+            <span class="text-xs font-medium ${isActive ? 'text-emerald-400 flex items-center space-x-1.5' : 'text-gray-500'}">
+              ${isActive ? '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>RUNNING</span>' : 'STANDBY'}
+            </span>
+          </div>
+
+          <div class="font-bold text-white text-base truncate mb-1" title="${acc.username}">${acc.username}</div>
+          <div class="text-[11px] text-gray-400 truncate mb-4 font-mono">${acc.slug}</div>
+
+          <div class="space-y-1.5 pt-3 border-t border-gray-800/60">
+            <div class="flex justify-between text-xs text-gray-400">
+              <span>Weekly Quota Used</span>
+              <span class="font-semibold text-gray-200">${used.toFixed(1)} / 30h (${qPct}%)</span>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-gradient-to-r from-blue-500 to-emerald-400 h-1.5 rounded-full" style="width: ${qPct}%"></div>
+            </div>
+            <div class="text-[11px] text-gray-500 text-right">${remaining.toFixed(1)}h remaining this week</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById("totalGpuUsedText").innerText = `${totalUsedHours.toFixed(1)} hrs`;
+      const poolRem = Math.max(0, 180.0 - totalUsedHours);
+      document.getElementById("totalGpuRemText").innerText = `${poolRem.toFixed(1)} hrs remaining`;
+
+      // Render timeline
+      const events = state.history || [];
+      const tbody = document.getElementById("eventsTableBody");
+      tbody.innerHTML = "";
+
+      if (events.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-4 px-4 text-center text-gray-500">No events recorded yet.</td></tr>`;
+      } else {
+        events.slice().reverse().slice(0, 15).forEach(evt => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-gray-800/30 transition";
+          
+          let dateStr = evt.time ? new Date(evt.time).toLocaleTimeString() : "--";
+          let badgeColor = "bg-gray-800 text-gray-300";
+          if (evt.event?.includes("rotate")) badgeColor = "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+          if (evt.event?.includes("cold")) badgeColor = "bg-purple-500/20 text-purple-400 border border-purple-500/30";
+          if (evt.event?.includes("fail") || evt.event?.includes("crash")) badgeColor = "bg-red-500/20 text-red-400 border border-red-500/30";
+          if (evt.event?.includes("stop")) badgeColor = "bg-amber-500/20 text-amber-400 border border-amber-500/30";
+
+          tr.innerHTML = `
+            <td class="py-2.5 px-4 text-gray-400 whitespace-nowrap">${dateStr}</td>
+            <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded text-[11px] font-medium ${badgeColor}">${evt.event}</span></td>
+            <td class="py-2.5 px-4 text-gray-300 font-sans">${evt.account || evt.old || '--'}</td>
+            <td class="py-2.5 px-4 text-gray-500 truncate max-w-xs">${evt.reason || (evt.forced ? 'Forced rotation' : 'Scheduled handover')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function renderFallback() {
+      renderDashboard({
+        current_account_index: 0,
+        current_session_start: new Date(Date.now() - 3600 * 1000 * 1.5).toISOString(),
+        quota: { "mangeshwagh91": { used_hours: 1.5 }, "mangeshhwagh": { used_hours: 11.68 } },
+        history: [{ time: new Date().toISOString(), event: "cold_start", account: "mangeshwagh91" }]
+      });
+    }
+
+    function initPolling() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => fetchState(false), refreshSec * 1000);
+    }
+
+    // Startup
+    fetchState(true);
+    initPolling();
+  </script>
+</body>
+</html>
