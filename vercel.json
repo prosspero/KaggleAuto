@@ -9,9 +9,5 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" }
       ]
     }
-  ],
-  "routes": [
-    { "src": "/state.json", "dest": "/state.json" },
-    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

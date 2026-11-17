@@ -1,0 +1,10 @@
+# Ignore Python and repo files so Vercel builds as a fast static site
+requirements.txt
+setup.py
+orchestrator.py
+ghactions_orchestrator.py
+monitor.py
+notebook/
+.github/
+README.md
+config.example.json
