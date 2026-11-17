@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Kaggle CLI
-        run: pip install kaggle
+      - name: Install Kaggle CLI and dependencies
+        run: pip install --upgrade kaggle six requests urllib3
 
       - name: Run rotation check
         env:

@@ -196,9 +196,11 @@ def prepare_push_dir(account):
     with open(NOTEBOOK_DIR / "kernel-metadata.json", "r") as f:
         meta = f.read()
 
-    slug = account.get("kernel_slug", f"{account['username']}/qwen3-32b-serve")
+    slug = account.get("kernel_slug", f"{account['username']}/qwen-35b-serve")
+    kernel_title = slug.split("/")[-1]
     meta = meta.replace("__USERNAME__", account["username"])
     meta = meta.replace("__KERNEL_SLUG__", slug)
+    meta = meta.replace("__KERNEL_TITLE__", kernel_title)
 
     with open(push_dir / "kernel-metadata.json", "w") as f:
         f.write(meta)
@@ -329,7 +331,11 @@ def health_check():
     import urllib.request
     import urllib.error
     try:
-        req = urllib.request.Request(url, method="GET")
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+            method="GET"
+        )
         req.add_header("User-Agent", "KaggleAutoGHA/1.0")
         with urllib.request.urlopen(req, timeout=15) as resp:
             if resp.status == 200:
