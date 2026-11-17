@@ -1,0 +1,1 @@
+# Serverless API uses only standard library

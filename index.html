@@ -271,7 +271,7 @@
       { username: "kaggle_user_6", slug: "kaggle_user_6/qwen-35b-serve-6", index: 5 },
     ];
 
-    let stateUrl = localStorage.getItem("kaggleauto_state_url") || "/state.json";
+    let stateUrl = localStorage.getItem("kaggleauto_state_url") || "/api";
     let healthUrl = localStorage.getItem("kaggleauto_health_url") || "https://qwen.prosspero.com/api/tags";
     let refreshSec = parseInt(localStorage.getItem("kaggleauto_refresh_sec") || "15", 10);
     let refreshTimer = null;
