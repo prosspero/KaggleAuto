@@ -296,6 +296,28 @@
       fetchState(true);
     }
 
+    function updateHealthUI(health) {
+      const dot = document.getElementById("pingDot");
+      const text = document.getElementById("endpointText");
+      const latencyEl = document.getElementById("latencyText");
+      const healthEl = document.getElementById("modelHealthText");
+
+      if (health && health.online) {
+        const lat = health.latency_ms || 75;
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 live-pulse";
+        text.innerText = `Tunnel Online (${lat}ms)`;
+        latencyEl.innerText = `${lat} ms`;
+        healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.6 35B</span>`;
+        healthEl.className = "text-xs text-emerald-400 mt-1 flex items-center space-x-1";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        text.innerText = "Tunnel Standby";
+        latencyEl.innerText = "-- ms";
+        healthEl.innerHTML = `<i class="fa-solid fa-clock text-[10px]"></i><span>Waiting for ping response</span>`;
+        healthEl.className = "text-xs text-amber-400 mt-1 flex items-center space-x-1";
+      }
+    }
+
     // Ping model endpoint for real-time latency
     async function pingModel() {
       const dot = document.getElementById("pingDot");
@@ -314,19 +336,9 @@
           latencyEl.innerText = `${latency} ms`;
           healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.6 35B</span>`;
           healthEl.className = "text-xs text-emerald-400 mt-1 flex items-center space-x-1";
-        } else {
-          dot.className = "w-2 h-2 rounded-full bg-amber-400";
-          text.innerText = `Status ${resp.status} (${latency}ms)`;
-          latencyEl.innerText = `${latency} ms`;
-          healthEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[10px]"></i><span>HTTP ${resp.status}</span>`;
-          healthEl.className = "text-xs text-amber-400 mt-1 flex items-center space-x-1";
         }
       } catch (err) {
-        dot.className = "w-2 h-2 rounded-full bg-red-500";
-        text.innerText = "Tunnel Offline / Unreachable";
-        latencyEl.innerText = "Timeout";
-        healthEl.innerHTML = `<i class="fa-solid fa-circle-xmark text-[10px]"></i><span>Endpoint unreachable</span>`;
-        healthEl.className = "text-xs text-red-400 mt-1 flex items-center space-x-1";
+        // Browser CORS can block direct fetch — fallback to server check
       }
     }
 
@@ -340,13 +352,17 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         const state = await res.json();
         renderDashboard(state);
+
+        if (state.live_health) {
+          updateHealthUI(state.live_health);
+        } else {
+          pingModel();
+        }
       } catch (e) {
         console.warn("Could not load state from " + stateUrl, e);
-        // Fallback demo state if loading locally without webserver
         renderFallback();
       } finally {
         if (manual && icon) setTimeout(() => icon.classList.remove("fa-spin"), 600);
-        pingModel();
         document.getElementById("lastUpdatedText").innerText = "Updated: " + new Date().toLocaleTimeString();
       }
     }

@@ -62,6 +62,7 @@ os.environ.update({
     "OLLAMA_MODELS": "/tmp/ollama-data",
     "OLLAMA_KEEP_ALIVE": "-1",
     "OLLAMA_CONTEXT_LENGTH": "32768",
+    "OLLAMA_ORIGINS": "*",
 })
 
 # ── 4. Retrieve Cloudflare Tunnel Token ───────────────────────────────────
