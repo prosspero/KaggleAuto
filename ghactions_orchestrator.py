@@ -500,6 +500,8 @@ def main():
         return
 
     # ── CASE 6: Everything is fine ──
+    state["last_health_check"] = now_iso()
+    state["last_health_ok"] = (hc is not False)
     remaining = SESSION_DURATION_HOURS - elapsed_h
     print(f"\n[OK] All good. {remaining:.2f}h remaining on {acct['username']}. Nothing to do.")
     save_state(state)

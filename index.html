@@ -275,6 +275,8 @@
     let healthUrl = localStorage.getItem("kaggleauto_health_url") || "https://qwen.prosspero.com/api/tags";
     let refreshSec = parseInt(localStorage.getItem("kaggleauto_refresh_sec") || "15", 10);
     let refreshTimer = null;
+    let tickTimer = null;
+    let lastLoadedState = null;
 
     function toggleSettingsModal() {
       const modal = document.getElementById("settingsModal");
@@ -285,7 +287,7 @@
     }
 
     function saveSettings() {
-      stateUrl = document.getElementById("settingStateUrl").value.trim() || "/state.json";
+      stateUrl = document.getElementById("settingStateUrl").value.trim() || "/api";
       healthUrl = document.getElementById("settingHealthUrl").value.trim() || "https://qwen.prosspero.com/api/tags";
       refreshSec = parseInt(document.getElementById("settingRefreshSec").value, 10);
       localStorage.setItem("kaggleauto_state_url", stateUrl);
@@ -303,7 +305,7 @@
       const healthEl = document.getElementById("modelHealthText");
 
       if (health && health.online) {
-        const lat = health.latency_ms || 75;
+        const lat = health.latency_ms || 85;
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 live-pulse";
         text.innerText = `Tunnel Online (${lat}ms)`;
         latencyEl.innerText = `${lat} ms`;
@@ -318,31 +320,57 @@
       }
     }
 
-    // Ping model endpoint for real-time latency
-    async function pingModel() {
-      const dot = document.getElementById("pingDot");
-      const text = document.getElementById("endpointText");
-      const latencyEl = document.getElementById("latencyText");
-      const healthEl = document.getElementById("modelHealthText");
+    // Live 1-second interval tick for smooth session countdown and quota tracking
+    function updateLiveSessionTick() {
+      if (!lastLoadedState || !lastLoadedState.current_session_start) return;
 
-      const start = performance.now();
-      try {
-        const resp = await fetch(healthUrl, { method: "GET", mode: "cors" });
-        const latency = Math.round(performance.now() - start);
+      const startMs = new Date(lastLoadedState.current_session_start).getTime();
+      const nowMs = Date.now();
+      const elapsedSec = Math.max(0, Math.floor((nowMs - startMs) / 1000));
+      const elapsedHours = elapsedSec / 3600;
+      const totalSessionHours = 11.5;
+      const remainingSec = Math.max(0, Math.floor(totalSessionHours * 3600 - elapsedSec));
 
-        if (resp.ok) {
-          dot.className = "w-2 h-2 rounded-full bg-emerald-400 live-pulse";
-          text.innerText = `Tunnel Online (${latency}ms)`;
-          latencyEl.innerText = `${latency} ms`;
-          healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.6 35B</span>`;
-          healthEl.className = "text-xs text-emerald-400 mt-1 flex items-center space-x-1";
-        }
-      } catch (err) {
-        // Browser CORS can block direct fetch — fallback to server check
+      const elH = Math.floor(elapsedSec / 3600);
+      const elM = Math.floor((elapsedSec % 3600) / 60);
+      const elS = elapsedSec % 60;
+
+      const remH = Math.floor(remainingSec / 3600);
+      const remM = Math.floor((remainingSec % 3600) / 60);
+      const remS = remainingSec % 60;
+
+      const pct = Math.min(100, Math.max(0, (elapsedHours / totalSessionHours) * 100)).toFixed(1);
+
+      const elText = document.getElementById("sessionElapsedText");
+      const remText = document.getElementById("sessionRemainingText");
+      const pctText = document.getElementById("sessionProgressPct");
+      const bar = document.getElementById("sessionProgressBar");
+
+      if (elText) elText.innerText = `${elH}h ${elM.toString().padStart(2, '0')}m ${elS.toString().padStart(2, '0')}s`;
+      if (remText) remText.innerText = `${remH}h ${remM.toString().padStart(2, '0')}m ${remS.toString().padStart(2, '0')}s`;
+      if (pctText) pctText.innerText = `${pct}%`;
+      if (bar) bar.style.width = `${pct}%`;
+
+      // Dynamically update active account card quota
+      const activeIdx = lastLoadedState.current_account_index || 0;
+      const activeMeta = ACCOUNTS_METADATA[activeIdx];
+      if (activeMeta && lastLoadedState.quota) {
+        const quotaInfo = lastLoadedState.quota[activeMeta.username] || { used_hours: 0 };
+        const baseUsed = parseFloat(quotaInfo.used_hours || 0);
+        const liveUsed = baseUsed + elapsedHours;
+        const qPct = Math.min(100, Math.round((liveUsed / 30.0) * 100));
+
+        const cardUsed = document.getElementById(`account-used-${activeIdx}`);
+        const cardProg = document.getElementById(`account-prog-${activeIdx}`);
+        const cardRem = document.getElementById(`account-rem-${activeIdx}`);
+
+        if (cardUsed) cardUsed.innerText = `${liveUsed.toFixed(2)} / 30h (${qPct}%)`;
+        if (cardProg) cardProg.style.width = `${qPct}%`;
+        if (cardRem) cardRem.innerText = `${Math.max(0, 30.0 - liveUsed).toFixed(2)}h remaining this week`;
       }
     }
 
-    // Fetch and render state.json
+    // Fetch and render state
     async function fetchState(manual = false) {
       const icon = document.getElementById("refreshIcon");
       if (manual && icon) icon.classList.add("fa-spin");
@@ -355,12 +383,12 @@
 
         if (state.live_health) {
           updateHealthUI(state.live_health);
-        } else {
-          pingModel();
         }
       } catch (e) {
         console.warn("Could not load state from " + stateUrl, e);
-        renderFallback();
+        if (!lastLoadedState) {
+          renderFallback();
+        }
       } finally {
         if (manual && icon) setTimeout(() => icon.classList.remove("fa-spin"), 600);
         document.getElementById("lastUpdatedText").innerText = "Updated: " + new Date().toLocaleTimeString();
@@ -368,6 +396,7 @@
     }
 
     function renderDashboard(state) {
+      lastLoadedState = state;
       const activeIdx = state.current_account_index || 0;
       const activeMeta = ACCOUNTS_METADATA[activeIdx] || { username: "Account " + activeIdx, slug: "" };
       const currentStart = state.current_session_start ? new Date(state.current_session_start) : null;
@@ -385,20 +414,6 @@
         document.getElementById("sessionStartTime").innerText = "Idle / Waiting";
       }
 
-      const totalSession = 11.5;
-      const remainingHours = Math.max(0, totalSession - elapsedHours);
-      const pct = Math.min(100, Math.round((elapsedHours / totalSession) * 100));
-
-      const elH = Math.floor(elapsedHours);
-      const elM = Math.round((elapsedHours - elH) * 60);
-      const remH = Math.floor(remainingHours);
-      const remM = Math.round((remainingHours - remH) * 60);
-
-      document.getElementById("sessionElapsedText").innerText = `${elH}h ${elM}m`;
-      document.getElementById("sessionRemainingText").innerText = `${remH}h ${remM}m`;
-      document.getElementById("sessionProgressPct").innerText = `${pct}%`;
-      document.getElementById("sessionProgressBar").style.width = `${pct}%`;
-
       // Quotas
       const quotaMap = state.quota || {};
       let totalUsedHours = 0;
@@ -410,7 +425,8 @@
       ACCOUNTS_METADATA.forEach((acc, i) => {
         const isActive = (i === activeIdx);
         const q = quotaMap[acc.username] || { used_hours: 0 };
-        const used = parseFloat(q.used_hours || 0);
+        const baseUsed = parseFloat(q.used_hours || 0);
+        const used = isActive ? (baseUsed + elapsedHours) : baseUsed;
         totalUsedHours += used;
         const remaining = Math.max(0, 30.0 - used);
         const qPct = Math.min(100, Math.round((used / 30.0) * 100));
@@ -438,12 +454,12 @@
           <div class="space-y-1.5 pt-3 border-t border-gray-800/60">
             <div class="flex justify-between text-xs text-gray-400">
               <span>Weekly Quota Used</span>
-              <span class="font-semibold text-gray-200">${used.toFixed(1)} / 30h (${qPct}%)</span>
+              <span class="font-semibold text-gray-200" id="account-used-${i}">${used.toFixed(2)} / 30h (${qPct}%)</span>
             </div>
             <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-gradient-to-r from-blue-500 to-emerald-400 h-1.5 rounded-full" style="width: ${qPct}%"></div>
+              <div class="bg-gradient-to-r from-blue-500 to-emerald-400 h-1.5 rounded-full" id="account-prog-${i}" style="width: ${qPct}%"></div>
             </div>
-            <div class="text-[11px] text-gray-500 text-right">${remaining.toFixed(1)}h remaining this week</div>
+            <div class="text-[11px] text-gray-500 text-right" id="account-rem-${i}">${remaining.toFixed(2)}h remaining this week</div>
           </div>
         `;
         grid.appendChild(card);
@@ -452,6 +468,9 @@
       document.getElementById("totalGpuUsedText").innerText = `${totalUsedHours.toFixed(1)} hrs`;
       const poolRem = Math.max(0, 180.0 - totalUsedHours);
       document.getElementById("totalGpuRemText").innerText = `${poolRem.toFixed(1)} hrs remaining`;
+
+      // Immediately trigger a live timer update
+      updateLiveSessionTick();
 
       // Render timeline
       const events = state.history || [];
@@ -486,15 +505,18 @@
     function renderFallback() {
       renderDashboard({
         current_account_index: 0,
-        current_session_start: new Date(Date.now() - 3600 * 1000 * 1.5).toISOString(),
+        current_session_start: "2026-11-17T05:01:16.331263+00:00",
         quota: { "mangeshwagh91": { used_hours: 1.5 }, "mangeshhwagh": { used_hours: 11.68 } },
-        history: [{ time: new Date().toISOString(), event: "cold_start", account: "mangeshwagh91" }]
+        history: [{ time: "2026-11-17T05:01:16.331263+00:00", event: "cold_start", account: "mangeshwagh91" }]
       });
     }
 
     function initPolling() {
       if (refreshTimer) clearInterval(refreshTimer);
+      if (tickTimer) clearInterval(tickTimer);
+
       refreshTimer = setInterval(() => fetchState(false), refreshSec * 1000);
+      tickTimer = setInterval(updateLiveSessionTick, 1000);
     }
 
     // Startup
