@@ -58,7 +58,9 @@ jobs:
         run: |
           git config user.name "KaggleAuto Bot"
           git config user.email "bot@kaggleauto.local"
-          git pull --rebase origin main
           git add state.json
-          git diff --cached --quiet || git commit -m "chore: update rotation state [skip ci]"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update rotation state [skip ci]"
+            git pull --rebase -X theirs origin main
+            git push
+          fi
