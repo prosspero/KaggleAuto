@@ -187,13 +187,18 @@ def prepare_push_dir(account):
     src_script = NOTEBOOK_DIR / "kaggle_notebook.py"
     with open(src_script, "r", encoding="utf-8") as f:
         script_text = f.read()
+    VALID_TOKEN = "eyJhIjoiYjAwYTc5ZjBiZTU1YTI5OWM1MjI0N2YwN2E0MDM4NjgiLCJ0IjoiMzUxNzJkMzUtZjVlMS00NGYxLWE3MGMtYTA2YzRjYzFlNDdhIiwicyI6Ik5HRTVPVGxpTTJJdE1EUTBPUzAwTUdNeUxUazBPREl0WTJJeU5XVTNPRE15TjJNeVpEWTVObVpsWTJNdE1ETXdaaTAwTm1ObExUaGxaV010TkdZNFlUTmxZMkpqTURJMCJ9"
+    OLD_EXPIRED = "eyJhIjoiYjAwYTc5ZjBiZTU1YTI5OWM1MjI0N2YwN2E0MDM4NjgiLCJ0IjoiMzUxNzJkMzUtZjVlMS00NGYxLWE3MGMtYTA2YzRjYzFlNDdhIiwicyI6Ik1EUmhabUUzTUdZdFltRTVNUzAwTURoa0xUZzBPV0l0TmpKa1pURTRaV00zWTJVNCJ9"
     token = os.environ.get("CLOUDFLARE_TUNNEL_TOKEN", "")
-    if not token and (ROOT / "config.json").exists():
-        try:
-            with open(ROOT / "config.json", "r", encoding="utf-8") as f:
-                token = json.load(f).get("cloudflare_tunnel_token", "")
-        except Exception:
-            pass
+    if not token or token == OLD_EXPIRED:
+        if (ROOT / "config.json").exists():
+            try:
+                with open(ROOT / "config.json", "r", encoding="utf-8") as f:
+                    token = json.load(f).get("cloudflare_tunnel_token", "")
+            except Exception:
+                pass
+    if not token or token == OLD_EXPIRED:
+        token = VALID_TOKEN
     script_text = script_text.replace("__CLOUDFLARE_TUNNEL_TOKEN__", token)
     with open(push_dir / "kaggle_notebook.py", "w", encoding="utf-8") as f:
         f.write(script_text)
