@@ -75,6 +75,12 @@
       "old": "mangesh91",
       "new": "mangeshwagh91",
       "reason": "cold_start_failed"
+    },
+    {
+      "time": "2026-11-18T13:03:05.390581+00:00",
+      "event": "stop_duplicate",
+      "account": "mangeshhwagh",
+      "reason": "multi_session_cleanup_took_13.30h"
     }
   ],
   "last_rotation": "2026-11-18T10:35:00.000000+00:00"
