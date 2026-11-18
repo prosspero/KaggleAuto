@@ -1,6 +1,9 @@
 # Private config containing Kaggle API keys and tokens
 config.json
 kaggle.json
+trigger_workflow.py
+push_acc4.py
+fix_state.py
 
 # Staging and cache folders
 logs/
