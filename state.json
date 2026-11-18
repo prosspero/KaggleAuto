@@ -1,6 +1,6 @@
 {
-  "current_account_index": 2,
-  "current_session_start": "2026-11-17T18:53:04.007714+00:00",
+  "current_account_index": 3,
+  "current_session_start": "2026-11-18T06:48:32.434794+00:00",
   "quota": {
     "mangeshwagh91": {
       "used_hours": 14.26,
@@ -11,16 +11,16 @@
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "geca91": {
-      "used_hours": 0.02,
-      "week_start": "2026-11-15T00:00:00"
+      "used_hours": 0.76,
+      "week_start": "2026-11-15T00:00:00+00:00"
     },
     "myaccount4": {
       "used_hours": 0.03,
-      "week_start": "2026-11-15T00:00:00"
+      "week_start": "2026-11-15T00:00:00+00:00"
     }
   },
-  "last_health_check": "2026-11-18T05:57:21.332563+00:00",
-  "last_health_ok": true,
+  "last_health_check": "2026-11-18T06:48:32.434794+00:00",
+  "last_health_ok": null,
   "consecutive_failures": 0,
   "history": [
     {
@@ -45,7 +45,13 @@
       "old": "mangeshhwagh",
       "new": "geca91",
       "reason": "health_failure"
+    },
+    {
+      "time": "2026-11-18T06:48:32.434794+00:00",
+      "event": "manual_start",
+      "account": "myaccount4",
+      "reason": "all_notebooks_dead"
     }
   ],
-  "last_rotation": "2026-11-17T18:53:04.007729+00:00"
+  "last_rotation": "2026-11-18T06:48:32.434794+00:00"
 }
