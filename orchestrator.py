@@ -103,6 +103,12 @@ def load_config() -> Dict[str, Any]:
     _file_handler.maxBytes = _config.get("log_max_bytes", 10 * 1024 * 1024)
     _file_handler.backupCount = _config.get("log_backup_count", 5)
 
+    # Exclude unverified accounts
+    _config["accounts"] = [
+        a for a in _config.get("accounts", [])
+        if a.get("username") != "mangesh919"
+    ]
+
     n = len(_config.get("accounts", []))
     if n == 0:
         logger.critical("No accounts defined in config.json")
@@ -292,11 +298,12 @@ def push_notebook(account: Dict[str, str]) -> bool:
             capture_output=True, text=True, timeout=120,
             env=_kaggle_env(account),
         )
-        if result.returncode == 0:
+        if result.returncode == 0 and "error" not in result.stdout.lower():
             logger.info("Push succeeded for %s: %s", username, result.stdout.strip())
             return True
         else:
-            logger.error("Push failed for %s (rc=%d): %s", username, result.returncode, result.stderr.strip())
+            err = result.stderr.strip() or result.stdout.strip()
+            logger.error("Push failed for %s: %s", username, err)
             return False
     except subprocess.TimeoutExpired:
         logger.error("Push timed out for %s.", username)

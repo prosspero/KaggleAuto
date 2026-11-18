@@ -152,15 +152,17 @@ _start_port_proxy()
 cf_proc = None
 if TUNNEL_TOKEN:
     cf_cmd = [
-        CLOUDFLARED_BIN, "tunnel", "--no-autoupdate", "run",
+        CLOUDFLARED_BIN, "tunnel",
+        "--protocol", "http2",
+        "run",
         "--token", TUNNEL_TOKEN,
     ]
-    print("▸ Starting Cloudflare tunnel connector...")
+    print("▸ Starting Cloudflare tunnel connector (protocol: http2 over TCP)...")
+    cf_log = open("/tmp/cloudflared.log", "a")
     cf_proc = subprocess.Popen(
         cf_cmd,
-        stdout=subprocess.PIPE,
+        stdout=cf_log,
         stderr=subprocess.STDOUT,
-        text=True,
     )
     time.sleep(5)
     if cf_proc.poll() is not None:
