@@ -324,7 +324,7 @@ def check_notebook_status(account: Dict[str, str]) -> str:
         logger.debug("Status for %s: %s", slug, output)
 
         # Kaggle CLI outputs lines like: "status 'running'"  or just "running"
-        for keyword in ("running", "queued", "complete", "error", "cancel_acknowledged", "cancelacknowledged", "failed"):
+        for keyword in ("cancel_requested", "running", "queued", "complete", "error", "cancel_acknowledged", "cancelacknowledged", "failed"):
             if keyword in output:
                 return keyword
         return output or "unknown"
@@ -336,7 +336,7 @@ def check_notebook_status(account: Dict[str, str]) -> str:
         return "unknown"
 
 
-def stop_notebook(account: Dict[str, str]) -> bool:
+def stop_notebook(account: Dict[str, str], wait_for_stop: bool = True, max_wait_sec: int = 60) -> bool:
     """Stop a running kernel by pushing a self-terminating script.
 
     Kaggle CLI has no 'cancel' command, so we overwrite the kernel with a
@@ -346,9 +346,9 @@ def stop_notebook(account: Dict[str, str]) -> bool:
     username = account["username"]
     slug = account.get("kernel_slug", f"{username}/qwen3-32b-serve")
 
-    # Only stop if it's actually running or queued
+    # Only stop if it's actually running, queued, or in cancel requested
     status = check_notebook_status(account)
-    if status not in ("running", "queued"):
+    if status not in ("running", "queued", "cancel_requested"):
         logger.info("Kernel %s is already '%s' — no stop needed.", slug, status)
         return True
 
@@ -391,6 +391,16 @@ def stop_notebook(account: Dict[str, str]) -> bool:
         )
         if result.returncode == 0:
             logger.info("Stop-push succeeded for %s: %s", username, result.stdout.strip())
+            if wait_for_stop:
+                logger.info("Waiting for %s to confirm stopped …", slug)
+                waited = 0
+                while waited < max_wait_sec and not _shutdown_event.is_set():
+                    time.sleep(5)
+                    waited += 5
+                    st = check_notebook_status(account)
+                    if st not in ("running", "queued", "cancel_requested"):
+                        logger.info("Kernel %s confirmed stopped (%s) after %ds.", slug, st, waited)
+                        break
             return True
         else:
             logger.error("Stop-push failed for %s (rc=%d): %s", username, result.returncode, result.stderr.strip())
@@ -537,9 +547,9 @@ def rotate_account(state: Dict[str, Any], accounts: List[Dict], *, force: bool =
     )
     _record_event(state, "rotate_start", old=old_acct["username"], new=new_acct["username"], forced=force)
 
-    # 1. Stop the OLD notebook immediately so only ONE session is ever active
+    # 1. Stop the OLD notebook and WAIT until it's confirmed stopped (zero overlap)
     logger.info("Stopping old notebook on %s before starting next account …", old_acct["username"])
-    stop_notebook(old_acct)
+    stop_notebook(old_acct, wait_for_stop=True)
 
     # 2. Record session accounting for the old account
     if state.get("current_session_start"):

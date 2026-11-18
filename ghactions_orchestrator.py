@@ -24,7 +24,7 @@ NOTEBOOK_DIR = ROOT / "notebook"
 
 # ── Configuration from environment ───────────────────────────────────────
 SESSION_DURATION_HOURS = 11.5  # auto-rotate after this
-OVERLAP_MINUTES = 5
+OVERLAP_MINUTES = 0            # Strictly 0: old notebook stops completely before new starts
 MAX_START_WAIT_SECONDS = 600   # 10 min max wait for notebook to start
 WEEKLY_LIMIT_HOURS = 30.0
 QUOTA_RESET_DAY = "sunday"     # 0=Monday, 6=Sunday
@@ -249,7 +249,7 @@ def check_status(account):
             env=kaggle_env(account),
         )
         output = result.stdout.strip().lower()
-        for keyword in ("running", "complete", "error", "cancelacknowledged", "queued"):
+        for keyword in ("cancel_requested", "cancelacknowledged", "running", "complete", "error", "queued"):
             if keyword in output:
                 return keyword
         return output or "unknown"
@@ -258,13 +258,13 @@ def check_status(account):
         return "unknown"
 
 
-def stop_notebook(account):
+def stop_notebook(account, wait_for_stop=True, max_wait_sec=60):
     """Stop a running kernel by pushing a self-terminating script."""
     username = account["username"]
     slug = account.get("kernel_slug", f"{username}/qwen3-32b-serve")
 
     status = check_status(account)
-    if status not in ("running", "queued"):
+    if status not in ("running", "queued", "cancel_requested"):
         print(f"  Kernel {slug} is already '{status}' — no stop needed.")
         return True
 
@@ -304,6 +304,16 @@ def stop_notebook(account):
         )
         if result.returncode == 0:
             print(f"  Stop-push OK for {username}: {result.stdout.strip()}")
+            if wait_for_stop:
+                print(f"  Waiting for {slug} to fully terminate...")
+                waited = 0
+                while waited < max_wait_sec:
+                    time.sleep(5)
+                    waited += 5
+                    st = check_status(account)
+                    if st not in ("running", "queued", "cancel_requested"):
+                        print(f"  Kernel {slug} confirmed stopped ({st}) after {waited}s.")
+                        break
             return True
         else:
             print(f"  Stop-push FAILED for {username}: {result.stderr.strip()}")
@@ -368,6 +378,69 @@ def pick_next_account(state, accounts):
     return best_idx
 
 
+# ── Fleet Audit & Multi-Session Resolver ────────────────────────────────
+def audit_and_resolve_multi_sessions(state, accounts):
+    """
+    Check all accounts across the fleet.
+    If multiple accounts are running/queued at the same time:
+      - Compare run durations.
+      - Stop the session(s) that took more time (older sessions).
+      - Retain only the newest session so strictly 1 session is active.
+    """
+    print("\n--- Fleet Audit: Checking for concurrent sessions ---")
+    active_sessions = []
+    current_idx = state.get("current_account_index", 0)
+
+    for idx, acct in enumerate(accounts):
+        st = check_status(acct)
+        if st in ("running", "queued", "cancel_requested"):
+            if idx == current_idx and state.get("current_session_start"):
+                duration = hours_since(state["current_session_start"])
+            else:
+                duration = state.get("quota", {}).get(acct["username"], {}).get("used_hours", 0.0)
+            active_sessions.append({
+                "index": idx,
+                "account": acct,
+                "status": st,
+                "duration": duration,
+            })
+            print(f"  Account #{idx+1} ({acct['username']}): ACTIVE ({st}, session ~{duration:.2f}h)")
+        else:
+            print(f"  Account #{idx+1} ({acct['username']}): {st}")
+
+    if len(active_sessions) > 1:
+        print(f"\n[ALERT] Found {len(active_sessions)} concurrent sessions! Enforcing 1-session rule...")
+        # Sort descending by duration: older session ("took more time") comes first
+        active_sessions.sort(key=lambda s: s["duration"], reverse=True)
+
+        # Stop the session(s) that took more time, keep the newest one
+        to_keep = active_sessions[-1]
+        to_stop = active_sessions[:-1]
+
+        for s in to_stop:
+            print(f"  --> Stopping session #{s['index']+1} ({s['account']['username']}) which took more time ({s['duration']:.2f}h)...")
+            stop_notebook(s['account'], wait_for_stop=True)
+            record_event(state, "stop_duplicate", account=s['account']['username'],
+                         reason=f"multi_session_cleanup_took_{s['duration']:.2f}h")
+
+        print(f"  --> Retained active session: #{to_keep['index']+1} ({to_keep['account']['username']}).")
+        state["current_account_index"] = to_keep["index"]
+        if state.get("current_account_index") != to_keep["index"] or not state.get("current_session_start"):
+            state["current_session_start"] = now_iso()
+        save_state(state)
+        return to_keep["index"]
+
+    elif len(active_sessions) == 1:
+        single = active_sessions[0]
+        if single["index"] != current_idx:
+            print(f"  Syncing active state index from {current_idx} to actual running account #{single['index']+1} ({single['account']['username']}).")
+            state["current_account_index"] = single["index"]
+            save_state(state)
+        return single["index"]
+
+    return None
+
+
 # ── Core rotation logic ────────────────────────────────────────────────
 def do_rotation(state, accounts, reason="scheduled"):
     old_idx = state["current_account_index"]
@@ -377,9 +450,9 @@ def do_rotation(state, accounts, reason="scheduled"):
 
     print(f"\n>>> ROTATING: {old_acct['username']} → {new_acct['username']} (reason: {reason})")
 
-    # 1. Stop old notebook first so only ONE session is ever active
+    # 1. Stop old notebook first and WAIT until it fully terminates (strictly 0 overlap)
     print(f"  Stopping old notebook on {old_acct['username']} before starting next account...")
-    stop_notebook(old_acct)
+    stop_notebook(old_acct, wait_for_stop=True)
 
     # 2. Track quota for old account
     if state.get("current_session_start"):
@@ -387,7 +460,15 @@ def do_rotation(state, accounts, reason="scheduled"):
         track_quota(state, old_acct["username"], hours)
         print(f"  Old account ran for {hours:.2f}h this session.")
 
-    # 3. Push new notebook
+    # 3. Double-check no other account across the fleet is lingering
+    for i, a in enumerate(accounts):
+        if i != new_idx:
+            st = check_status(a)
+            if st in ("running", "queued", "cancel_requested"):
+                print(f"  Cleaning up lingering session #{i+1} ({a['username']})...")
+                stop_notebook(a, wait_for_stop=True)
+
+    # 4. Push new notebook
     ok = push_notebook(new_acct)
     if not ok:
         print(f"  Push failed for {new_acct['username']}, trying next...")
@@ -403,7 +484,7 @@ def do_rotation(state, accounts, reason="scheduled"):
             record_event(state, "rotate_failed", reason=reason)
             return
 
-    # 4. Wait briefly for it to start (GH Actions has limited time)
+    # 5. Wait for new notebook to start
     print(f"  Waiting for {new_acct['username']} to start...")
     waited = 0
     while waited < MAX_START_WAIT_SECONDS:
@@ -417,7 +498,7 @@ def do_rotation(state, accounts, reason="scheduled"):
         time.sleep(30)
         waited += 30
 
-    # 5. Update state
+    # 6. Update state
     state["current_account_index"] = new_idx
     state["current_session_start"] = now_iso()
     state["last_rotation"] = now_iso()
@@ -434,6 +515,10 @@ def main():
 
     accounts = get_accounts()
     state = load_state()
+
+    # ── STEP 1: Fleet Audit & Multi-Session Resolution ──
+    # If 2 or more sessions are running, pause the one that took more time
+    active_idx = audit_and_resolve_multi_sessions(state, accounts)
 
     force = os.environ.get("FORCE_ROTATE", "false").lower() == "true"
 
@@ -454,8 +539,8 @@ def main():
         return
 
     # ── CASE 2: No session running (first ever run, or after crash) ──
-    if session_start is None:
-        print("\n[COLD START] No active session. Starting first notebook...")
+    if session_start is None or active_idx is None:
+        print("\n[COLD START] No active session found. Starting current notebook...")
         ok = push_notebook(acct)
         if ok:
             state["current_session_start"] = now_iso()
@@ -490,9 +575,8 @@ def main():
         return
 
     # ── CASE 4: Health check ──
-    # Grace period: 15 min for notebook to boot + 10 min for model pull = 25 min total
-    # Extend grace to 30 min (0.5h) so a fresh account has time to load
-    HEALTH_GRACE_HOURS = 0.5
+    # Grace period: 45 min (0.75h) for notebook to boot and pull 35B model
+    HEALTH_GRACE_HOURS = 0.75
     hc = health_check()
     if hc is False and elapsed_h > HEALTH_GRACE_HOURS:
         print(f"\n[HEALTH] Model endpoint is down after {elapsed_h:.2f}h — failover!")
@@ -500,10 +584,9 @@ def main():
         save_state(state)
         return
 
-    # ── CASE 5: Time-based rotation ──
-    rotation_threshold = SESSION_DURATION_HOURS - (OVERLAP_MINUTES / 60.0)
-    if elapsed_h >= rotation_threshold:
-        print(f"\n[TIMER] Session at {elapsed_h:.2f}h >= threshold {rotation_threshold:.2f}h — rotating!")
+    # ── CASE 5: Time-based rotation (Strict Zero Overlap) ──
+    if elapsed_h >= SESSION_DURATION_HOURS:
+        print(f"\n[TIMER] Session at {elapsed_h:.2f}h >= limit {SESSION_DURATION_HOURS}h — rotating!")
         do_rotation(state, accounts, reason="scheduled")
         save_state(state)
         return

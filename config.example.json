@@ -35,7 +35,7 @@
     "health_check_url": "https://your-tunnel-subdomain.trycloudflare.com/v1/models",
     "timing": {
         "session_duration_hours": 11.5,
-        "overlap_minutes": 5,
+        "overlap_minutes": 0,
         "health_check_interval_seconds": 60,
         "status_poll_interval_seconds": 30,
         "max_start_wait_minutes": 15
