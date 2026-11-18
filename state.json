@@ -1,6 +1,6 @@
 {
   "current_account_index": 5,
-  "current_session_start": "2026-11-18T09:35:01.077482+00:00",
+  "current_session_start": "2026-11-18T10:41:51.809018+00:00",
   "quota": {
     "mangeshwagh91": {
       "used_hours": 16.31,
@@ -73,6 +73,11 @@
       "old": "mangesh91",
       "new": "mangesh919",
       "reason": "health_failure"
+    },
+    {
+      "time": "2026-11-18T10:41:51.809036+00:00",
+      "event": "cold_start",
+      "account": "mangesh919"
     }
   ],
   "last_rotation": "2026-11-18T09:35:01.077496+00:00"
