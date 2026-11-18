@@ -146,7 +146,32 @@ def _start_port_proxy():
 
 _start_port_proxy()
 
-# ── 6. Pull and Warmup Model ─────────────────────────────────────────────
+# ── 6. Start Cloudflare Tunnel Immediately ───────────────────────────────
+# Starts immediately so Cloudflare recognizes the connector as Healthy/Active (UP)
+# within the first 2 minutes, rather than waiting 30+ minutes for model download.
+cf_proc = None
+if TUNNEL_TOKEN:
+    cf_cmd = [
+        CLOUDFLARED_BIN, "tunnel", "--no-autoupdate", "run",
+        "--token", TUNNEL_TOKEN,
+    ]
+    print("▸ Starting Cloudflare tunnel connector...")
+    cf_proc = subprocess.Popen(
+        cf_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    time.sleep(5)
+    if cf_proc.poll() is not None:
+        print("⚠ cloudflared exited early — check your token.", file=sys.stderr)
+        cf_proc = None
+    else:
+        print(f"✔ Cloudflare tunnel connected and running (PID {cf_proc.pid})")
+else:
+    print("⚠ Skipping Cloudflare tunnel (no token provided).")
+
+# ── 7. Pull and Warmup Model ─────────────────────────────────────────────
 print(f"▸ Pulling model {MODEL} (this may take a few minutes)...")
 pull_res = subprocess.run(["ollama", "pull", MODEL], capture_output=True, text=True)
 print(pull_res.stdout[-300:] if pull_res.stdout else "")
@@ -168,29 +193,6 @@ try:
         print(f"✔ Warmup success: {body.get('message', {}).get('content', 'OK')}")
 except Exception as e:
     print(f"⚠ Warmup request note: {e}")
-
-# ── 7. Start Cloudflare Tunnel ───────────────────────────────────────────
-cf_proc = None
-if TUNNEL_TOKEN:
-    cf_cmd = [
-        CLOUDFLARED_BIN, "tunnel", "--no-autoupdate", "run",
-        "--token", TUNNEL_TOKEN,
-    ]
-    print("▸ Starting Cloudflare tunnel...")
-    cf_proc = subprocess.Popen(
-        cf_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    time.sleep(5)
-    if cf_proc.poll() is not None:
-        print("⚠ cloudflared exited early — check your token.", file=sys.stderr)
-        cf_proc = None
-    else:
-        print(f"✔ Cloudflare tunnel running (PID {cf_proc.pid})")
-else:
-    print("⚠ Skipping Cloudflare tunnel (no token provided).")
 
 # ── 8. Heartbeat Thread ──────────────────────────────────────────────────
 _shutdown_event = threading.Event()
