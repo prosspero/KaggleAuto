@@ -490,9 +490,12 @@ def main():
         return
 
     # ── CASE 4: Health check ──
+    # Grace period: 15 min for notebook to boot + 10 min for model pull = 25 min total
+    # Extend grace to 30 min (0.5h) so a fresh account has time to load
+    HEALTH_GRACE_HOURS = 0.5
     hc = health_check()
-    if hc is False and elapsed_h > 0.5:  # give 30 min grace for model loading
-        print("\n[HEALTH] Model endpoint is down — failover!")
+    if hc is False and elapsed_h > HEALTH_GRACE_HOURS:
+        print(f"\n[HEALTH] Model endpoint is down after {elapsed_h:.2f}h — failover!")
         do_rotation(state, accounts, reason="health_failure")
         save_state(state)
         return
