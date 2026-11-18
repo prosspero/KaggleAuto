@@ -267,11 +267,13 @@
       { username: "mangeshhwagh", slug: "mangeshhwagh/qwen-35b-serve-2", index: 1 },
       { username: "geca91", slug: "geca91/qwen-35b-serve-3", index: 2 },
       { username: "myaccount4", slug: "myaccount4/qwen-35b-serve-4", index: 3 },
-      { username: "kaggle_user_5", slug: "kaggle_user_5/qwen-35b-serve-5", index: 4 },
-      { username: "kaggle_user_6", slug: "kaggle_user_6/qwen-35b-serve-6", index: 5 },
+      { username: "mangesh91", slug: "mangesh91/qwen-35b-serve-5", index: 4 },
+      { username: "mangesh919", slug: "mangesh919/qwen-35b-serve-6", index: 5 },
     ];
 
-    let stateUrl = localStorage.getItem("kaggleauto_state_url") || "/api";
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/prosspero/KaggleAuto/main/state.json";
+    let defaultStateUrl = (window.location.protocol === "file:") ? GITHUB_RAW_URL : "/api";
+    let stateUrl = localStorage.getItem("kaggleauto_state_url") || defaultStateUrl;
     let healthUrl = localStorage.getItem("kaggleauto_health_url") || "https://qwen.prosspero.com/api/tags";
     let refreshSec = parseInt(localStorage.getItem("kaggleauto_refresh_sec") || "15", 10);
     let refreshTimer = null;
@@ -376,8 +378,20 @@
       if (manual && icon) icon.classList.add("fa-spin");
 
       try {
-        const res = await fetch(stateUrl + "?_t=" + Date.now());
-        if (!res.ok) throw new Error("HTTP " + res.status);
+        let res;
+        try {
+          const sep = stateUrl.includes("?") ? "&" : "?";
+          res = await fetch(stateUrl + sep + "_t=" + Date.now());
+          if (!res.ok) throw new Error("HTTP " + res.status);
+        } catch (fetchErr) {
+          if (stateUrl !== GITHUB_RAW_URL) {
+            console.warn("Primary state URL failed, falling back to GitHub raw...", fetchErr);
+            res = await fetch(GITHUB_RAW_URL + "?_t=" + Date.now());
+            if (!res.ok) throw new Error("GitHub raw HTTP " + res.status);
+          } else {
+            throw fetchErr;
+          }
+        }
         const state = await res.json();
         renderDashboard(state);
 
@@ -504,10 +518,17 @@
 
     function renderFallback() {
       renderDashboard({
-        current_account_index: 0,
-        current_session_start: "2026-11-17T05:01:16.331263+00:00",
-        quota: { "mangeshwagh91": { used_hours: 1.5 }, "mangeshhwagh": { used_hours: 11.68 } },
-        history: [{ time: "2026-11-17T05:01:16.331263+00:00", event: "cold_start", account: "mangeshwagh91" }]
+        current_account_index: 3,
+        current_session_start: "2026-11-18T06:48:32.434794+00:00",
+        quota: {
+          "mangeshwagh91": { used_hours: 16.31 },
+          "mangeshhwagh": { used_hours: 13.30 },
+          "geca91": { used_hours: 11.65 },
+          "myaccount4": { used_hours: 11.91 },
+          "mangesh91": { used_hours: 0.0 },
+          "mangesh919": { used_hours: 0.0 }
+        },
+        history: [{ time: "2026-11-18T06:48:32.434794+00:00", event: "manual_start", account: "myaccount4" }]
       });
     }
 
