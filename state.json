@@ -1,6 +1,6 @@
 {
-  "current_account_index": 0,
-  "current_session_start": "2026-11-18T11:41:12.093265+00:00",
+  "current_account_index": 4,
+  "current_session_start": "2026-11-18T13:13:17.759968+00:00",
   "quota": {
     "mangeshwagh91": {
       "used_hours": 16.31,
@@ -81,6 +81,12 @@
       "event": "stop_duplicate",
       "account": "mangeshhwagh",
       "reason": "multi_session_cleanup_took_13.30h"
+    },
+    {
+      "time": "2026-11-18T13:13:17.759968+00:00",
+      "event": "manual_start",
+      "account": "mangesh91",
+      "reason": "started_with_new_tunnel_token"
     }
   ],
   "last_rotation": "2026-11-18T10:35:00.000000+00:00"
