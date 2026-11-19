@@ -103,12 +103,6 @@ def load_config() -> Dict[str, Any]:
     _file_handler.maxBytes = _config.get("log_max_bytes", 10 * 1024 * 1024)
     _file_handler.backupCount = _config.get("log_backup_count", 5)
 
-    # Exclude unverified accounts
-    _config["accounts"] = [
-        a for a in _config.get("accounts", [])
-        if a.get("username") != "mangesh919"
-    ]
-
     n = len(_config.get("accounts", []))
     if n == 0:
         logger.critical("No accounts defined in config.json")

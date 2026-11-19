@@ -42,8 +42,6 @@ def get_accounts():
         except Exception:
             pass
 
-    UNVERIFIED_USERS = {"mangesh919"}
-
     for i in range(1, 7):
         user = os.environ.get(f"KAGGLE_USER_{i}", "")
         key = os.environ.get(f"KAGGLE_KEY_{i}", "")
@@ -56,10 +54,6 @@ def get_accounts():
                 slug = ca.get("kernel_slug", f"{user}/qwen-35b-serve-{i}")
         else:
             slug = f"{user}/qwen-35b-serve-{i}"
-
-        if user in UNVERIFIED_USERS:
-            print(f"Skipping unverified Kaggle account: {user}")
-            continue
 
         if user and key and not key.startswith("hex_"):
             accounts.append({
