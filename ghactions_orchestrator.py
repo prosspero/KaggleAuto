@@ -264,8 +264,24 @@ def check_status(account):
         return "unknown"
 
 
-def stop_notebook(account, wait_for_stop=True, max_wait_sec=60):
-    """Stop a running kernel by pushing a self-terminating script."""
+def stop_notebook(account, wait_for_stop=True, max_wait_sec=600):
+    """
+    Stop a running kernel by pushing a no-GPU, no-run self-terminating script.
+
+    Strategy:
+      1. First try --no-run push (saves a new version WITHOUT executing) —
+         this avoids 'Maximum batch GPU session count of 2 reached' because
+         no new execution is started.  Kaggle will abort the running session
+         when the new version is saved.
+      2. If --no-run succeeds, poll until status is not running/queued.
+      3. If --no-run fails (e.g. kernel doesn't support it), fall back to a
+         normal push with enable_gpu=False so the new execution terminates
+         immediately and kills the GPU allocation.
+      4. After whichever push succeeds, wait up to max_wait_sec for status
+         to leave running/queued.  Returns True only when confirmed stopped
+         (or already stopped).  Returns False if we ran out of wait time or
+         the push itself failed.
+    """
     username = account["username"]
     slug = account.get("kernel_slug", f"{username}/qwen3-32b-serve")
 
@@ -303,27 +319,55 @@ def stop_notebook(account, wait_for_stop=True, max_wait_sec=60):
         with open(stop_dir / "kernel-metadata.json", "w", encoding="utf-8") as fh:
             json.dump(meta, fh, indent=2)
 
+        push_ok = False
+
+        # ── Attempt 1: --no-run  (no new GPU session started) ──────────────
         result = subprocess.run(
-            ["kaggle", "kernels", "push", "-p", str(stop_dir)],
+            ["kaggle", "kernels", "push", "--no-run", "-p", str(stop_dir)],
             capture_output=True, text=True, timeout=120,
             env=kaggle_env(account),
         )
-        if result.returncode == 0:
-            print(f"  Stop-push OK for {username}: {result.stdout.strip()}")
-            if wait_for_stop:
-                print(f"  Waiting for {slug} to fully terminate...")
-                waited = 0
-                while waited < max_wait_sec:
-                    time.sleep(5)
-                    waited += 5
-                    st = check_status(account)
-                    if st not in ("running", "queued", "cancel_requested"):
-                        print(f"  Kernel {slug} confirmed stopped ({st}) after {waited}s.")
-                        break
-            return True
+        if result.returncode == 0 and "error" not in result.stdout.lower():
+            print(f"  Stop --no-run OK for {username}: {result.stdout.strip()}")
+            push_ok = True
         else:
-            print(f"  Stop-push FAILED for {username}: {result.stderr.strip()}")
+            norun_err = (result.stderr.strip() or result.stdout.strip())
+            print(f"  Stop --no-run failed for {username}: {norun_err}")
+            print(f"  Falling back to normal stop-push (enable_gpu=False)...")
+
+            # ── Attempt 2: normal push with enable_gpu=False ────────────────
+            result2 = subprocess.run(
+                ["kaggle", "kernels", "push", "-p", str(stop_dir)],
+                capture_output=True, text=True, timeout=120,
+                env=kaggle_env(account),
+            )
+            if result2.returncode == 0:
+                print(f"  Stop fallback-push OK for {username}: {result2.stdout.strip()}")
+                push_ok = True
+            else:
+                err2 = result2.stderr.strip() or result2.stdout.strip()
+                print(f"  Stop fallback-push ALSO FAILED for {username}: {err2}")
+
+        if not push_ok:
             return False
+
+        if wait_for_stop:
+            print(f"  Waiting up to {max_wait_sec}s for {slug} to fully terminate...")
+            waited = 0
+            poll_interval = 10
+            while waited < max_wait_sec:
+                time.sleep(poll_interval)
+                waited += poll_interval
+                st = check_status(account)
+                print(f"    [{waited}s] {slug} status: {st}")
+                if st not in ("running", "queued", "cancel_requested", "cancelacknowledged"):
+                    print(f"  Kernel {slug} confirmed stopped ({st}) after {waited}s.")
+                    return True
+            print(f"  WARNING: {slug} still active after {max_wait_sec}s — giving up wait.")
+            return False
+
+        return True
+
     except Exception as e:
         print(f"  Error stopping notebook for {username}: {e}")
         return False
@@ -456,9 +500,16 @@ def do_rotation(state, accounts, reason="scheduled"):
 
     print(f"\n>>> ROTATING: {old_acct['username']} → {new_acct['username']} (reason: {reason})")
 
-    # 1. Stop old notebook first and WAIT until it fully terminates (strictly 0 overlap)
+    # 1. Stop old notebook first and WAIT until fully terminated (strictly 0 overlap)
     print(f"  Stopping old notebook on {old_acct['username']} before starting next account...")
-    stop_notebook(old_acct, wait_for_stop=True)
+    stop_ok = stop_notebook(old_acct, wait_for_stop=True, max_wait_sec=600)
+    if not stop_ok:
+        print(f"  ABORT ROTATION: Could not confirm stop of {old_acct['username']}!")
+        print(f"  Refusing to start new session to prevent concurrent GPU usage.")
+        record_event(state, "rotate_aborted", reason="stop_failed",
+                     account=old_acct["username"])
+        save_state(state)
+        return
 
     # 2. Track quota for old account
     if state.get("current_session_start"):
@@ -467,12 +518,15 @@ def do_rotation(state, accounts, reason="scheduled"):
         print(f"  Old account ran for {hours:.2f}h this session.")
 
     # 3. Double-check no other account across the fleet is lingering
+    #    Stop ALL other accounts before starting new one (fleet-wide 1-session guarantee)
     for i, a in enumerate(accounts):
         if i != new_idx:
             st = check_status(a)
-            if st in ("running", "queued", "cancel_requested"):
+            if st in ("running", "queued", "cancel_requested", "cancelacknowledged"):
                 print(f"  Cleaning up lingering session #{i+1} ({a['username']})...")
-                stop_notebook(a, wait_for_stop=True)
+                lingering_stopped = stop_notebook(a, wait_for_stop=True, max_wait_sec=300)
+                if not lingering_stopped:
+                    print(f"  WARNING: Could not stop lingering #{i+1} ({a['username']}) — continuing anyway.")
 
     # 4. Push new notebook
     ok = push_notebook(new_acct)
