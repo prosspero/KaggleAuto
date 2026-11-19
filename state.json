@@ -1,9 +1,9 @@
 {
-  "current_account_index": 4,
-  "current_session_start": "2026-11-19T01:59:13.145683+00:00",
+  "current_account_index": 1,
+  "current_session_start": "2026-11-19T16:15:57.762557+00:00",
   "quota": {
     "mangeshwagh91": {
-      "used_hours": 16.31,
+      "used_hours": 30.5793,
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangeshhwagh": {
@@ -96,7 +96,14 @@
       "time": "2026-11-19T01:59:13.145702+00:00",
       "event": "cold_start",
       "account": "mangesh91"
+    },
+    {
+      "time": "2026-11-19T16:15:57.762579+00:00",
+      "event": "rotated",
+      "old": "mangeshwagh91",
+      "new": "mangeshhwagh",
+      "reason": "scheduled"
     }
   ],
-  "last_rotation": "2026-11-18T10:35:00.000000+00:00"
+  "last_rotation": "2026-11-19T16:15:57.762572+00:00"
 }
