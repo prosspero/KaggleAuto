@@ -1,6 +1,6 @@
 {
   "current_account_index": 2,
-  "current_session_start": "2026-11-20T16:54:04.352979+00:00",
+  "current_session_start": "2026-11-20T17:52:38.165013+00:00",
   "quota": {
     "mangeshwagh91": {
       "used_hours": 30.5793,
@@ -113,6 +113,11 @@
     },
     {
       "time": "2026-11-20T16:54:04.352999+00:00",
+      "event": "cold_start",
+      "account": "geca91"
+    },
+    {
+      "time": "2026-11-20T17:52:38.165029+00:00",
       "event": "cold_start",
       "account": "geca91"
     }
