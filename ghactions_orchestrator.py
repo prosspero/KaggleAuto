@@ -635,8 +635,8 @@ def main():
         return
 
     # ── CASE 4: Health check ──
-    # Grace period: 45 min (0.75h) for notebook to boot and pull 35B model
-    HEALTH_GRACE_HOURS = 0.75
+    # Grace period: 30 min (0.5h) for notebook to boot and pull 9B model
+    HEALTH_GRACE_HOURS = 0.5
     hc = health_check()
     if hc is False and elapsed_h > HEALTH_GRACE_HOURS:
         print(f"\n[HEALTH] Model endpoint is down after {elapsed_h:.2f}h — failover!")

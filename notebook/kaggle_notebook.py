@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-KaggleAuto GPU Notebook — Ollama Qwen3.6:35b with Cloudflare Tunnel
+KaggleAuto GPU Notebook — Ollama Qwen 3.5 9B with Cloudflare Tunnel
 ===================================================================
-Designed for Kaggle GPU T4 x2 (32 GB VRAM total).
-Installs Ollama, pulls and serves qwen3.6:35b on port 11434, exposes it
+Installs Ollama, pulls and serves qwen3.5:9b on port 11434, exposes it
 via Cloudflare Named Tunnel, writes heartbeats, and gracefully shuts down
 at 11.5 hours before Kaggle's 12-hour session limit.
 """
@@ -39,8 +38,8 @@ def get_gpu_count() -> int:
         return 1
 
 n_gpu = get_gpu_count()
-MODEL = "qwen3.6:35b" if n_gpu >= 2 else "qwen3.5:9b"
-print(f"▸ GPUs detected: {n_gpu} -> Target model: {MODEL}")
+MODEL = "qwen3.5:9b"
+print(f"▸ GPUs detected: {n_gpu} -> Target model: {MODEL} (Optimized for speed & low latency)")
 
 # ── 2. Install dependencies (apt + Ollama + cloudflared) ─────────────────
 print("▸ Installing system tools (pciutils, lshw, zstd)...")

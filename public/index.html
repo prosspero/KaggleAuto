@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KaggleAuto — 24/7 Qwen3.6-35B Fleet Monitor</title>
+  <title>KaggleAuto — 24/7 Qwen 3.5 9B Fleet Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script>
@@ -53,7 +53,7 @@
             <h1 class="font-bold text-lg text-white tracking-tight">KaggleAuto</h1>
             <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Fleet v2.1</span>
           </div>
-          <p class="text-xs text-gray-400">24/7 Autonomous GPU Cluster • Qwen 3.6 35B</p>
+          <p class="text-xs text-gray-400">24/7 Autonomous GPU Cluster • Qwen 3.5 9B</p>
         </div>
       </div>
 
@@ -311,7 +311,7 @@
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 live-pulse";
         text.innerText = `Tunnel Online (${lat}ms)`;
         latencyEl.innerText = `${lat} ms`;
-        healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.6 35B</span>`;
+        healthEl.innerHTML = `<i class="fa-solid fa-circle-check text-[10px]"></i><span>Serving Qwen 3.5 9B</span>`;
         healthEl.className = "text-xs text-emerald-400 mt-1 flex items-center space-x-1";
       } else {
         dot.className = "w-2 h-2 rounded-full bg-amber-400";
