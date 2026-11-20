@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,27 +32,53 @@
   </script>
   <style>
     @keyframes pulse-subtle {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.85; transform: scale(1.02); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.85;
+        transform: scale(1.02);
+      }
     }
-    .live-pulse { animation: pulse-subtle 2s infinite ease-in-out; }
-    .glass { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .glass-card { background: rgba(31, 41, 55, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+    .live-pulse {
+      animation: pulse-subtle 2s infinite ease-in-out;
+    }
+
+    .glass {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card {
+      background: rgba(31, 41, 55, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
   </style>
 </head>
+
 <body class="bg-[#080c14] text-gray-100 min-h-screen font-sans selection:bg-brand-500 selection:text-white">
 
   <!-- Navigation Bar -->
   <header class="border-b border-gray-800 bg-[#0d131f]/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+        <div
+          class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
           <i class="fa-solid fa-server text-white text-lg"></i>
         </div>
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="font-bold text-lg text-white tracking-tight">KaggleAuto</h1>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Fleet v2.1</span>
+            <span
+              class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Fleet
+              v2.1</span>
           </div>
           <p class="text-xs text-gray-400">24/7 Autonomous GPU Cluster • Qwen 3.5 9B</p>
         </div>
@@ -59,17 +86,21 @@
 
       <!-- Quick Status Badges -->
       <div class="flex items-center space-x-3">
-        <div id="endpointBadge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700/60 text-xs text-gray-300">
+        <div id="endpointBadge"
+          class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700/60 text-xs text-gray-300">
           <span class="w-2 h-2 rounded-full bg-yellow-400 live-pulse" id="pingDot"></span>
           <span id="endpointText">Pinging model...</span>
         </div>
 
-        <button onclick="fetchState(true)" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 transition border border-gray-700">
+        <button onclick="fetchState(true)"
+          class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 transition border border-gray-700">
           <i class="fa-solid fa-rotate text-gray-400" id="refreshIcon"></i>
           <span>Refresh</span>
         </button>
 
-        <button onclick="toggleSettingsModal()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition border border-gray-700" title="Settings">
+        <button onclick="toggleSettingsModal()"
+          class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition border border-gray-700"
+          title="Settings">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
@@ -82,21 +113,25 @@
     <!-- Active Session Hero Card -->
     <div class="glass rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
       <div class="absolute -right-16 -top-16 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none">
+      </div>
 
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
         <div>
           <div class="flex items-center space-x-3 mb-2">
-            <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
+            <span
+              class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               <span>ACTIVE SESSION</span>
             </span>
             <span class="text-xs text-gray-400" id="sessionStartTime">Started: Loading...</span>
           </div>
-          <h2 class="text-3xl font-extrabold text-white tracking-tight" id="activeAccountName">Connecting to cluster...</h2>
+          <h2 class="text-3xl font-extrabold text-white tracking-tight" id="activeAccountName">Connecting to cluster...
+          </h2>
           <p class="text-sm text-gray-400 mt-1 flex items-center space-x-2">
             <span id="activeSlugText">Kernel: Loading...</span>
-            <a id="kaggleKernelLink" href="#" target="_blank" class="text-brand-400 hover:text-brand-300 inline-flex items-center space-x-1 text-xs">
+            <a id="kaggleKernelLink" href="#" target="_blank"
+              class="text-brand-400 hover:text-brand-300 inline-flex items-center space-x-1 text-xs">
               <span>View on Kaggle</span>
               <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
             </a>
@@ -126,7 +161,9 @@
           <span id="sessionProgressPct">0%</span>
         </div>
         <div class="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
-          <div id="sessionProgressBar" class="bg-gradient-to-r from-emerald-500 via-teal-400 to-brand-400 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+          <div id="sessionProgressBar"
+            class="bg-gradient-to-r from-emerald-500 via-teal-400 to-brand-400 h-2.5 rounded-full transition-all duration-500"
+            style="width: 0%"></div>
         </div>
       </div>
     </div>
@@ -180,7 +217,8 @@
           <h3 class="text-lg font-bold text-white">Accounts Fleet Matrix</h3>
           <p class="text-xs text-gray-400">Real-time status, weekly quotas, and GPU utilization for all 6 accounts</p>
         </div>
-        <span class="text-xs px-2.5 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700">Strict 1-Account Active Rule</span>
+        <span class="text-xs px-2.5 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700">Strict 1-Account
+          Active Rule</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="accountsGrid">
@@ -220,7 +258,8 @@
   </main>
 
   <!-- Settings Modal -->
-  <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="settingsModal"
+    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold text-white">Dashboard Settings</h3>
@@ -232,19 +271,25 @@
       <div class="space-y-4 text-sm">
         <div>
           <label class="block text-xs font-medium text-gray-300 mb-1">State Data Source URL</label>
-          <input type="text" id="settingStateUrl" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500" placeholder="/state.json or https://raw.githubusercontent.com/.../state.json">
-          <p class="text-[11px] text-gray-500 mt-1">Leave as <code>/state.json</code> when deployed together on Vercel, or paste your GitHub raw URL.</p>
+          <input type="text" id="settingStateUrl"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500"
+            placeholder="/state.json or https://raw.githubusercontent.com/.../state.json">
+          <p class="text-[11px] text-gray-500 mt-1">Leave as <code>/state.json</code> when deployed together on Vercel,
+            or paste your GitHub raw URL.</p>
         </div>
 
         <div>
           <label class="block text-xs font-medium text-gray-300 mb-1">Model Health Check Endpoint</label>
-          <input type="text" id="settingHealthUrl" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500" value="https://qwen.prosspero.com/api/tags">
+          <input type="text" id="settingHealthUrl"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-brand-500"
+            value="https://qwen.prosspero.com/api/tags">
           <p class="text-[11px] text-gray-500 mt-1">Used to measure real-time browser-to-model latency.</p>
         </div>
 
         <div>
           <label class="block text-xs font-medium text-gray-300 mb-1">Auto Refresh Interval (Seconds)</label>
-          <select id="settingRefreshSec" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs">
+          <select id="settingRefreshSec"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs">
             <option value="10">10 seconds</option>
             <option value="15" selected>15 seconds</option>
             <option value="30">30 seconds</option>
@@ -254,8 +299,11 @@
       </div>
 
       <div class="mt-6 flex justify-end space-x-3">
-        <button onclick="toggleSettingsModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs font-medium hover:bg-gray-700">Cancel</button>
-        <button onclick="saveSettings()" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-medium hover:bg-brand-500">Save & Reload</button>
+        <button onclick="toggleSettingsModal()"
+          class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs font-medium hover:bg-gray-700">Cancel</button>
+        <button onclick="saveSettings()"
+          class="px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-medium hover:bg-brand-500">Save &
+          Reload</button>
       </div>
     </div>
   </div>
@@ -446,11 +494,10 @@
         const qPct = Math.min(100, Math.round((used / 30.0) * 100));
 
         const card = document.createElement("div");
-        card.className = `rounded-xl p-5 border transition-all ${
-          isActive 
-            ? "bg-gradient-to-b from-gray-900 to-gray-800/90 border-emerald-500/50 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
+        card.className = `rounded-xl p-5 border transition-all ${isActive
+            ? "bg-gradient-to-b from-gray-900 to-gray-800/90 border-emerald-500/50 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20"
             : "glass-card border-gray-800/80 hover:border-gray-700"
-        }`;
+          }`;
 
         card.innerHTML = `
           <div class="flex items-center justify-between mb-3">
@@ -497,7 +544,7 @@
         events.slice().reverse().slice(0, 15).forEach(evt => {
           const tr = document.createElement("tr");
           tr.className = "hover:bg-gray-800/30 transition";
-          
+
           let dateStr = evt.time ? new Date(evt.time).toLocaleTimeString() : "--";
           let badgeColor = "bg-gray-800 text-gray-300";
           if (evt.event?.includes("rotate")) badgeColor = "bg-blue-500/20 text-blue-400 border border-blue-500/30";
@@ -545,4 +592,5 @@
     initPolling();
   </script>
 </body>
+
 </html>
