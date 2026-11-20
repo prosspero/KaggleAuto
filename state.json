@@ -1,13 +1,13 @@
 {
-  "current_account_index": 1,
-  "current_session_start": "2026-11-19T16:15:57.762557+00:00",
+  "current_account_index": 2,
+  "current_session_start": "2026-11-20T04:42:23.360750+00:00",
   "quota": {
     "mangeshwagh91": {
       "used_hours": 30.5793,
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangeshhwagh": {
-      "used_hours": 13.3,
+      "used_hours": 25.7305,
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "geca91": {
@@ -103,7 +103,14 @@
       "old": "mangeshwagh91",
       "new": "mangeshhwagh",
       "reason": "scheduled"
+    },
+    {
+      "time": "2026-11-20T04:42:23.360768+00:00",
+      "event": "rotated",
+      "old": "mangeshhwagh",
+      "new": "geca91",
+      "reason": "cold_start_failed"
     }
   ],
-  "last_rotation": "2026-11-19T16:15:57.762572+00:00"
+  "last_rotation": "2026-11-20T04:42:23.360764+00:00"
 }
