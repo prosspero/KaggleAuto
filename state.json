@@ -19,7 +19,7 @@
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangesh91": {
-      "used_hours": 203.4749,
+      "used_hours": 229.1322,
       "week_start": "2026-11-22T00:00:00+00:00"
     },
     "mangesh919": {
@@ -195,6 +195,11 @@
     },
     {
       "time": "2026-11-24T14:28:35.764949+00:00",
+      "event": "rotate_failed",
+      "reason": "cold_start_failed"
+    },
+    {
+      "time": "2026-11-24T15:36:09.471055+00:00",
       "event": "rotate_failed",
       "reason": "cold_start_failed"
     }
