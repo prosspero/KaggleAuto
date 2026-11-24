@@ -19,7 +19,7 @@
       "week_start": "2026-11-15T00:00:00+00:00"
     },
     "mangesh91": {
-      "used_hours": 229.1322,
+      "used_hours": 255.9493,
       "week_start": "2026-11-22T00:00:00+00:00"
     },
     "mangesh919": {
@@ -31,10 +31,6 @@
   "last_health_ok": true,
   "consecutive_failures": 0,
   "history": [
-    {
-      "time": "2026-11-17T04:55:00+00:00",
-      "event": "all_sessions_stopped_and_reset"
-    },
     {
       "time": "2026-11-17T05:01:16.331263+00:00",
       "event": "cold_start",
@@ -200,6 +196,11 @@
     },
     {
       "time": "2026-11-24T15:36:09.471055+00:00",
+      "event": "rotate_failed",
+      "reason": "cold_start_failed"
+    },
+    {
+      "time": "2026-11-24T16:45:43.849100+00:00",
       "event": "rotate_failed",
       "reason": "cold_start_failed"
     }
